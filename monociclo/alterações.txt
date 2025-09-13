@@ -1,0 +1,23 @@
+maindec:
+1.Adicionei as operações para o jump(tipo J) e o tipo i
+2. Adicionei o Jump em controls
+
+riscvsingle:
+1. PCSrc não estava declarado explicitamente.
+
+extend:
+1. Tinha apenas 2 casos, sendo que faltavam o caso '00' e '10'
+2. Adicionei esses casos
+
+
+
+datapath:
+O módulo não funciona para jump, solução pensada foi
+adicionar um novo mux para saber quando vai ser um branch(beq) e quando vai ser um jal
+
+1. Adicionei um fio intermediario "PCBranchOrSeq
+2. Adicionei um mux "pcjump" para que ele decida se ele vai mandar A
+    branch ou o valor do jump, sendo o "Jump" o seletor desse mux
+3. Na declaração do datapath eu coloquei o Jump
+4. Substuir o 32'b0 por pc + 4
+

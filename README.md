@@ -25,4 +25,4 @@ O processador foi escrito em Verilog e é capaz de executar um conjunto base de 
 * **Data:** Setembro de 2025
 
 ### Observação
-* Tanto o código em assembly quanto o código .sv antes das modificações não foi feitos por nós dois, apenas modificamos o código original para que ele consiga rodar no "testBanch" e assim podermos entender mais sobre processadores monociclo e pipeline
+* Tanto o código em assembly quanto o código .sv antes das modificações, não foram feitos por nós dois, apenas modificamos o código original para que ele consiga rodar no "testBanch" e assim podermos entender mais sobre processadores monociclo e pipeline

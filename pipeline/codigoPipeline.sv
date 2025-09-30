@@ -50,6 +50,17 @@ module riscv(input  logic        clk, reset,
               RegWriteW, ResultSrcW,
               Rs1D, Rs2D, Rs1E, Rs2E, RdE, RdM, RdW);
 
+  // Instancia a unidade de forwarding
+  forwardingUnit fu(Rs1E, Rs2E, RdM, RdW,
+                  RegWriteM, RegWriteW,
+                  ForwardAE, ForwardBE);
+
+// Instancia a unidade de detecção de hazard
+  hazardUnit hu(Rs1D, Rs2D, RdE,
+              ResultSrcEb0,
+              PCSrcE,
+              StallF, StallD, FlushD, FlushE);
+
 endmodule
 
 
@@ -106,6 +117,105 @@ module controller(input  logic		 clk, reset,
                          {RegWriteM, ResultSrcM},
                          {RegWriteW, ResultSrcW});     
 endmodule
+
+//Unidade de detecção de Hazard
+//Pseudo codigo
+/*module hazardUnit(input [31:0]  ID/EX.rd,input ID/EX.MemWrite,
+                  input [6:0] opcode, output [31:0] stallPC,output stallMux);
+
+  //Quando stallMux for 0 ele envia os sinais de controle, caso contrario ele coloca 0 para os registradores
+  //de controle WB,M,EX
+  stallMUX = 0 
+  if (ID/EX.MemWrite and ((ID/EX.r2 == IF/ID.r1) or (ID/EX.r2 == IF/ID.r2)))
+    stallPC = 0
+    stallMux = 1
+
+    //Lembrar de colocar um mux de duas entradas uma entrada para  os dados do controle que vao para os registradores de controle
+    // a segunda entrada será o numero 0 e o seletor do mux sera o stallMUX
+
+endmodule
+*/
+
+module hazardUnit(input  logic [4:0] Rs1D, Rs2D, RdE,       // Entradas: Registradores
+                  input  logic       ResultSrcEb0,          // Entrada: Identifica se a instr em EX é lw
+                  input  logic       PCSrcE,                // Entrada: Identifica se um branch foi tomado
+                  output logic       StallF, StallD, FlushD, FlushE); // Saídas de controle
+
+  logic load_use_hazard;
+
+  // A condição para o hazard Load-Use é:
+  // 1. A instrução no estágio EX é um lw (ResultSrcE[0] é 1 para lw).
+  // 2. O registrador de destino do lw (RdE) é o mesmo que um dos registradores
+  //    de origem da instrução no estágio ID (Rs1D ou Rs2D).
+  assign load_use_hazard = ResultSrcEb0 && ( (RdE == Rs1D) || (RdE == Rs2D) );
+
+  // Gerar os sinais de stall e flush
+  assign StallF = load_use_hazard;
+  assign StallD = load_use_hazard;
+  // Inserimos uma bolha no estágio EX se houver stall
+  assign FlushE = load_use_hazard;
+  // Descartamos a instrução no estágio D se um branch for tomado no estágio E
+  assign FlushD = PCSrcE;
+endmodule
+//unit forwarding
+//Pseudo codigo
+/*
+module forwardingUnit(input [4:0] ID/EX.r1,ID/EX.r2,
+                      MEM/WB.rd,
+                      input MEM/WB.RegWrite, EX/MEM.RegWrite,
+                      output[1:0] forwardA,forwardB);
+  forwardA = 00;
+  forwardB = 00;
+  //Hazard EX:
+    if(EX/MEM.WriteReg and (EX/MEM.rd != 0) and (EX/MEM.rd == ID/EX.r1))
+      forwardA = 10
+    if(EX/MEM.RegWrite and (EX/MEM.rd != 0) and (EX/MEM.rd == ID/EX.r2))
+    forwardB = 10
+
+  //Hazard MEM:
+  if(MEM/WB.WriteReg and (MEM/WB.rd != 0) and (MEM/WB.rd == ID/EX.r1))
+      forwardA = 01
+  if(MEM/WB.WriteReg and (MEM/WB.rd != 0) and (MEM/WB.rd == ID/EX.r2))
+      forwardB = 01
+
+  //Hazard caso especial
+  if ( MEM/WB.WriteReg and ( MEM/WB.rd != 0) and not (EX/MEM.WriteReg and (EX/MEM.rd != 0) and (EX/MEM.rd != ID/EX.r1)) and (MEM/WB.rd = ID/EX.r1))
+    forwardA = 01
+  if ( MEM/WB.RegWrite and ( MEM/WB.rd != 0) and not (EX/MEM.RegWrite and (EX/MEM.rd != 0) and (EX/MEM.rd != ID/EX.r2)) and (MEM/WB.rd = ID/EX.r2))
+    forwardB = 01
+
+
+endmodule
+*/
+module forwardingUnit(input  logic [4:0] Rs1E, Rs2E, RdM, RdW, // Entradas: Registradores nos estágios E, M, W
+                      input  logic       RegWriteM, RegWriteW, // Entradas: Sinais de controle
+                      output logic [1:0] ForwardAE, ForwardBE); // Saídas: Sinais de seleção para os MUXes
+
+  always_comb begin
+    // Padrão: Sem forwarding
+    ForwardAE = 2'b00;
+    ForwardBE = 2'b00;
+
+    // Checa se a instrução no estágio MEM vai escrever um resultado
+    // e se esse resultado é necessário como operando A ou B no estágio EX.
+    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs1E))
+      ForwardAE = 2'b10; // Encaminha o resultado da ULA (ALUResultM)
+    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs2E))
+      ForwardBE = 2'b10; // Encaminha o resultado da ULA (ALUResultM)
+
+    // Hazard MEM (Prioridade 2: o dado mais antigo) 
+    // Checa se a instrução no estágio WB vai escrever um resultado
+    // e se esse resultado é necessário no estágio EX (e não foi resolvido pelo Hazard EX).
+    if (RegWriteW && (RdW != 5'b0) && (RdW == Rs1E))
+      ForwardAE = 2'b01; // Encaminha o resultado final (ResultW)
+    if (RegWriteW && (RdW != 5'b0) && (RdW == Rs2E))
+      ForwardBE = 2'b01; // Encaminha o resultado final (ResultW)
+  end
+endmodule
+
+
+
+
 
 module maindec(input  logic [6:0] op,
                output logic [1:0] ResultSrc,

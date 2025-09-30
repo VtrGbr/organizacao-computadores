@@ -16,7 +16,22 @@ O processador foi escrito em Verilog e é capaz de executar um conjunto base de 
 # Processador RISC-V Pipeline
 
 ## Descrição do projeto
-    Temos como tarefa adicionar as unidades de hazard de controle no "codigoPipeline.sv", resolvendo assim os problemas de perigos de dados e controle
+
+Temos como tarefa adicionar as unidades de **hazard de controle** no arquivo `codigoPipeline.sv`, resolvendo assim os problemas de perigos de dados e controle no pipeline do processador.
+
+### O que são hazards de controle?
+Hazards de controle ocorrem quando instruções no pipeline dependem de resultados de ramificações (branching) ou saltos (jumps). Para mais informações, veja [este artigo sobre hazards em pipelines](https://en.wikipedia.org/wiki/Pipeline_hazard).
+
+### Tarefas
+- [ ] Identificar pontos de hazard de controle no `codigoPipeline.sv`
+- [ ] Implementar as unidades de hazard para dados e controle
+- [ ] Testar o código no ambiente `testBanch`
+
+### Disciplina
+
+* **Nome da Disciplina:** Organização e Arquitetura de Computadores
+* **Instituição:** UFAL
+* **Data:** Setembro de 2025
 
 ### Disciplina
 
@@ -25,4 +40,5 @@ O processador foi escrito em Verilog e é capaz de executar um conjunto base de 
 * **Data:** Setembro de 2025
 
 ### Observação
+
 * Tanto o código em assembly quanto o código .sv antes das modificações, não foram feitos por nós dois, apenas modificamos o código original para que ele consiga rodar no "testBanch" e assim podermos entender mais sobre processadores monociclo e pipeline

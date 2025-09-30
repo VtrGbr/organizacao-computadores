@@ -33,12 +33,8 @@ Hazards de controle ocorrem quando instruções no pipeline dependem de resultad
 * **Instituição:** UFAL
 * **Data:** Setembro de 2025
 
-### Disciplina
-
-* **Nome da Disciplina:** Organização e Arquitetura de Computadores
-* **Instituição:** UFAL
-* **Data:** Setembro de 2025
 
 ### Observação
 
 * Tanto o código em assembly quanto o código .sv antes das modificações, não foram feitos por nós dois, apenas modificamos o código original para que ele consiga rodar no "testBanch" e assim podermos entender mais sobre processadores monociclo e pipeline
+

@@ -144,16 +144,15 @@ module hazardUnit(input  logic [4:0] Rs1D, Rs2D, RdE,       // Entradas: Registr
   logic load_use_hazard;
 
   // A condição para o hazard Load-Use é:
-  // 1. A instrução no estágio EX é um lw (ResultSrcE[0] é 1 para lw).
+  // 1. A instrução no estágio EX é um lw (ResultSrcE[0] é 1 para lw)
   // 2. O registrador de destino do lw (RdE) é o mesmo que um dos registradores
-  //    de origem da instrução no estágio ID (Rs1D ou Rs2D).
-  assign load_use_hazard = ResultSrcEb0 && ( (RdE == Rs1D) || (RdE == Rs2D) );
+  //    de origem da instrução no estágio ID (Rs1D ou Rs2D). Acrescentei o RDE ser diferente de 0
+  assign load_use_hazard = ResultSrcEb0 && (RdE != 5'b0) && ( (RdE == Rs1D) || (RdE == Rs2D) );
 
   // Gerar os sinais de stall e flush
   assign StallF = load_use_hazard;
-  assign StallD = load_use_hazard;
-  // Inserimos uma bolha no estágio EX se houver stall
-  assign FlushE = load_use_hazard;
+  assign StallD = load_use_hazard;  // Inserimos uma bolha no estágio EX se houver stall
+  assign FlushE = PCSrcE || StallD; //Mudança nesta parte que estava dando erro
   // Descartamos a instrução no estágio D se um branch for tomado no estágio E
   assign FlushD = PCSrcE;
 endmodule
@@ -198,22 +197,20 @@ module forwardingUnit(input  logic [4:0] Rs1E, Rs2E, RdM, RdW, // Entradas: Regi
 
     // Checa se a instrução no estágio MEM vai escrever um resultado
     // e se esse resultado é necessário como operando A ou B no estágio EX.
-    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs1E))
+    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs1E)) begin
       ForwardAE = 2'b10; // Encaminha o resultado da ULA (ALUResultM)
-    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs2E))
-      ForwardBE = 2'b10; // Encaminha o resultado da ULA (ALUResultM)
-
-    // Hazard MEM (Prioridade 2: o dado mais antigo) 
-    // Checa se a instrução no estágio WB vai escrever um resultado
-    // e se esse resultado é necessário no estágio EX (e não foi resolvido pelo Hazard EX).
-    if (RegWriteW && (RdW != 5'b0) && (RdW == Rs1E))
-      ForwardAE = 2'b01; // Encaminha o resultado final (ResultW)
-    if (RegWriteW && (RdW != 5'b0) && (RdW == Rs2E))
+    end
+    else if ( RegWriteW && (RdW != 5'b0) && (RdW == Rs1E)) begin
+      ForwardAE = 2'b01;
+    end
+    if (RegWriteM && (RdM != 5'b0) && (RdM == Rs2E)) begin
+    ForwardBE = 2'b10; // Encaminha o resultado da ULA (ALUResultM)
+    end
+    else if (RegWriteW && (RdW != 5'b0) && (RdW == Rs2E)) begin
       ForwardBE = 2'b01; // Encaminha o resultado final (ResultW)
+    end
   end
 endmodule
-
-
 
 
 
